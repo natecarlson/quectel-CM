@@ -214,7 +214,7 @@ void udhcpc_start(PROFILE_T *profile) {
 
         if (profile->ipv4.Address) {
 #ifdef USE_DHCLIENT
-            snprintf(udhcpc_cmd, sizeof(udhcpc_cmd), "dhclient -4 -d --no-pid %s", ifname);
+            snprintf(udhcpc_cmd, sizeof(udhcpc_cmd), "dhclient -4 -d -q --no-pid %s", ifname);
             dhclient_alive++;
 #else
             if (access("/usr/share/udhcpc/default.script", X_OK)) {
@@ -247,7 +247,7 @@ void udhcpc_start(PROFILE_T *profile) {
 
         if (profile->ipv6.Address[0] && profile->ipv6.PrefixLengthIPAddr) {
 #ifdef USE_DHCLIENT
-            snprintf(udhcpc_cmd, sizeof(udhcpc_cmd), "dhclient -6 -d --no-pid %s",  ifname);
+            snprintf(udhcpc_cmd, sizeof(udhcpc_cmd), "dhclient -6 -d -q --no-pid %s",  ifname);
             dhclient_alive++;
 #else
             /*
