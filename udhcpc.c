@@ -71,7 +71,7 @@ static void* udhcpc_thread_function(void* arg) {
     return NULL;
 }
 
-//#define USE_DHCLIENT
+#define USE_DHCLIENT
 #ifdef USE_DHCLIENT
 static int dhclient_alive = 0;
 #endif
