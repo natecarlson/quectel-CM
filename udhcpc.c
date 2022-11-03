@@ -22,6 +22,8 @@
 #include <arpa/inet.h>
 #include <endian.h>
 
+#define USE_DHCLIENT
+
 #include "util.h"
 #include "QMIThread.h"
 extern int ql_get_netcard_carrier_state(const char *devname);
@@ -178,7 +180,6 @@ static void* udhcpc_thread_function(void* arg) {
     return NULL;
 }
 
-#define USE_DHCLIENT
 #ifdef USE_DHCLIENT
 static int dhclient_alive = 0;
 #endif
