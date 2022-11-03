@@ -65,27 +65,6 @@ static void ql_set_mtu(const char *ifname, int ifru_mtu) {
     }
 }
 
-static int ifc_get_addr(const char *name, in_addr_t *addr)
-{
-    int inet_sock;
-    struct ifreq ifr;
-    int ret = 0;
-
-    inet_sock = socket(AF_INET, SOCK_DGRAM, 0);
-
-    ifc_init_ifr(name, &ifr);
-    if (addr != NULL) {
-        ret = ioctl(inet_sock, SIOCGIFADDR, &ifr);
-        if (ret < 0) {
-            *addr = 0;
-        } else {
-            *addr = ((struct sockaddr_in*) &ifr.ifr_addr)->sin_addr.s_addr;
-        }
-    }
-    close(inet_sock);
-    return ret;
-}
-
 static short ifc_get_flags(const char *ifname)
 {
     int inet_sock;
@@ -109,6 +88,27 @@ static short ifc_get_flags(const char *ifname)
 
 #ifdef USE_DHCLIENT
 #else
+static int ifc_get_addr(const char *name, in_addr_t *addr)
+{
+    int inet_sock;
+    struct ifreq ifr;
+    int ret = 0;
+
+    inet_sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+    ifc_init_ifr(name, &ifr);
+    if (addr != NULL) {
+        ret = ioctl(inet_sock, SIOCGIFADDR, &ifr);
+        if (ret < 0) {
+            *addr = 0;
+        } else {
+            *addr = ((struct sockaddr_in*) &ifr.ifr_addr)->sin_addr.s_addr;
+        }
+    }
+    close(inet_sock);
+    return ret;
+}
+
 static int ql_netcard_ipv4_address_check(const char *ifname, in_addr_t ip) {
     in_addr_t addr = 0;
 
