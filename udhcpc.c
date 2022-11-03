@@ -112,6 +112,8 @@ static int ql_netcard_ipv4_address_check(const char *ifname, in_addr_t ip) {
     return addr == ip;
 }
 
+#ifdef USE_DHCLIENT
+#else
 static int ql_raw_ip_mode_check(const char *ifname, uint32_t ip) {
     int fd;
     char raw_ip[128];
@@ -148,6 +150,7 @@ static int ql_raw_ip_mode_check(const char *ifname, uint32_t ip) {
     close(fd);
     return mode_change;
 }
+#endif
 
 static void* udhcpc_thread_function(void* arg) {
     FILE * udhcpc_fp;
@@ -685,7 +688,7 @@ void udhcpc_stop(PROFILE_T *profile) {
 
 #ifdef USE_DHCLIENT
     if (dhclient_alive) {
-        system("killall dhclient");
+        if (system("killall dhclient")) {};
         dhclient_alive = 0;
     }
 #endif
