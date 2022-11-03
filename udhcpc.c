@@ -107,6 +107,8 @@ static short ifc_get_flags(const char *ifname)
     return ret;
 }
 
+#ifdef USE_DHCLIENT
+#else
 static int ql_netcard_ipv4_address_check(const char *ifname, in_addr_t ip) {
     in_addr_t addr = 0;
 
@@ -114,8 +116,6 @@ static int ql_netcard_ipv4_address_check(const char *ifname, in_addr_t ip) {
     return addr == ip;
 }
 
-#ifdef USE_DHCLIENT
-#else
 static int ql_raw_ip_mode_check(const char *ifname, uint32_t ip) {
     int fd;
     char raw_ip[128];
