@@ -542,7 +542,7 @@ void udhcpc_start(PROFILE_T *profile) {
         pthread_attr_setdetachstate(&udhcpc_thread_attr, PTHREAD_CREATE_DETACHED);
 
 #ifdef USE_DHCLIENT
-            snprintf(udhcpc_cmd, sizeof(udhcpc_cmd), "dhclient -4 -d --no-pid %s", ifname);
+            snprintf(udhcpc_cmd, sizeof(udhcpc_cmd), "dhclient -4 -d -q --no-pid %s", ifname);
             dhclient_alive++;
 #else
             if (access("/usr/share/udhcpc/default.script", X_OK)
@@ -642,7 +642,7 @@ set_ipv6:
 #endif
 #else
 #ifdef USE_DHCLIENT
-        snprintf(udhcpc_cmd, sizeof(udhcpc_cmd), "dhclient -6 -d --no-pid %s",  ifname);
+        snprintf(udhcpc_cmd, sizeof(udhcpc_cmd), "dhclient -6 -d -q --no-pid %s",  ifname);
         dhclient_alive++;
 #else
         /*
