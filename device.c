@@ -350,6 +350,7 @@ BOOL qmidevice_detect(char *qmichannel, char *usbnet_adapter, unsigned bufsize, 
                 break;
                 case 0x6026: //EC200T
                 case 0x6002: //EC200S
+                case 0x6001: //EC100Y
                     atIntf = 3;
                 break;
                 default:

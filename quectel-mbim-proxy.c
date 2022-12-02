@@ -227,7 +227,7 @@ static int handle_client_request(int mbim_dev_fd, int client_fd, void *pdata, in
     /* transfer TransicationID to proxy transicationID and record in sender list */
     pRequest->TransactionId = htole32(TransactionId | (client_idx << TID_SHIFT));
     if (verbose) mbim_debug("REQ client_fd=%d, client_idx=%d, tid=%u\n",
-        cm_clients[i].client_fd, cm_clients[i].client_idx, TransactionId);
+        cm_clients[client_idx].client_fd, cm_clients[client_idx].client_idx, TransactionId);
     ret = non_block_write (mbim_dev_fd, pRequest, len);
     if (ret == len)
         return 0;

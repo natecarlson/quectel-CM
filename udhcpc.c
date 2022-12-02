@@ -307,7 +307,7 @@ static void update_ip_address_by_qmi(const char *ifname, const IPV4_T *ipv4, con
         unsigned n = 0;
 
         for (n = 0; n < 32; n++) {
-            if (ipv4->SubnetMask&(1<<n)) {
+            if (ipv4->SubnetMask&((unsigned)1<<n)) {
                 prefix++;
             }
         }

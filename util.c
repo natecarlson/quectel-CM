@@ -197,6 +197,23 @@ UINT  le32_to_cpu (UINT v32) {
     return tmp;
 }
 
+ULONG64  le64_to_cpu (ULONG64 v64) {
+    ULONG64 tmp = v64;
+    if (is_bigendian()) {
+        unsigned char *s = (unsigned char *)(&v64);
+        unsigned char *d = (unsigned char *)(&tmp);
+        d[0] = s[7];
+        d[1] = s[6];
+        d[2] = s[5];
+        d[3] = s[4];
+        d[4] = s[3];
+        d[5] = s[2];
+        d[6] = s[1];
+        d[7] = s[0];
+    }
+    return tmp;
+}
+
 UINT ql_swap32(UINT v32) {
     UINT tmp = v32;
     {
@@ -230,6 +247,23 @@ UINT cpu_to_le32 (UINT v32) {
         d[1] = s[2];
         d[2] = s[1];
         d[3] = s[0];
+    }
+    return tmp;
+}
+
+ULONG64 cpu_to_le64 (ULONG64 v64) {
+    ULONG64 tmp = v64;
+    if (is_bigendian()) {
+        unsigned char *s = (unsigned char *)(&v64);
+        unsigned char *d = (unsigned char *)(&tmp);
+        d[0] = s[7];
+        d[1] = s[6];
+        d[2] = s[5];
+        d[3] = s[4];
+        d[4] = s[3];
+        d[5] = s[2];
+        d[6] = s[1];
+        d[7] = s[0];
     }
     return tmp;
 }

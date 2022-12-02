@@ -1,5 +1,11 @@
 Release Notes
 
+[V1.6.2]
+Date:   11/18/2021
+enhancement:
+	1. support 'LTE && WiFi Coexistence Solution via QMI'.
+	   If customer want use this feature, need enable CONFIG_COEX_WWAN_STATE in QMIThread.h 
+
 [V1.6.1]
 Date:   7/20/2021
 enhancement:
@@ -7,6 +13,7 @@ enhancement:
 	2. add QMI OVER MBIM 
 	3. support qrtr and rmnet
 	4. support RG500U PCIE 
+	5. add qos service && get qos flow data_rate_max func
 fix:
   1. mbim: increase mbim open timeout to 3 seconds. some modem take long time for open cmd.
   2. support MsChapV2

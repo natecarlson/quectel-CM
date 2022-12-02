@@ -1679,11 +1679,19 @@ typedef struct _QMIDMS_EVENT_REPORT_IND_MSG
 // ======================= QOS ==============================
 typedef struct _MPIOC_DEV_INFO MPIOC_DEV_INFO, *PMPIOC_DEV_INFO;
 
-#define QMI_QOS_SET_EVENT_REPORT_REQ  0x0001
-#define QMI_QOS_SET_EVENT_REPORT_RESP 0x0001
-#define QMI_QOS_EVENT_REPORT_IND      0x0001
+#define QMI_QOS_SET_EVENT_REPORT_REQ        0x0001
+#define QMI_QOS_SET_EVENT_REPORT_RESP       0x0001
+#define QMI_QOS_SET_EVENT_REPORT_IND        0x0001
+#define QMI_QOS_BIND_DATA_PORT_REQ          0x002B
+#define QMI_QOS_BIND_DATA_PORT_RESP         0x002B
+#define QMI_QOS_INDICATION_REGISTER_REQ	    0x002F
+#define QMI_QOS_INDICATION_REGISTER_RESP    0x002F
+#define QMI_QOS_GLOBAL_QOS_FLOW_IND	        0x0031
+#define QMI_QOS_GET_QOS_INFO_REQ            0x0033
+#define QMI_QOS_GET_QOS_INFO_RESP           0x0033
 
-#if 0
+
+#if 1
 typedef struct _QMI_QOS_SET_EVENT_REPORT_REQ_MSG
 {
    USHORT Type;             // QMUX type 0x0001
@@ -1710,12 +1718,441 @@ typedef struct _QMI_QOS_SET_EVENT_REPORT_RESP_MSG
                             // QMUX_ERR_FAULT
 } QMI_QOS_SET_EVENT_REPORT_RESP_MSG, *PQMI_QOS_SET_EVENT_REPORT_RESP_MSG;
 
-typedef struct _QMI_QOS_EVENT_REPORT_IND_MSG
+typedef struct _QMI_QOS_SET_EVENT_REPORT_IND_MSG
 {
    USHORT Type;             // QMUX type 0x0001
    USHORT Length;
    UCHAR  TLVs;
-} QMI_QOS_EVENT_REPORT_IND_MSG, *PQMI_QOS_EVENT_REPORT_IND_MSG;
+} QMI_QOS_SET_EVENT_REPORT_IND_MSG, *PQMI_QOS_SET_EVENT_REPORT_IND_MSG;
+
+
+typedef struct _QMI_QOS_BIND_DATA_PORT_TLV_EP_ID
+{
+	UCHAR	TLVType;		//0x10
+	USHORT	TLVLength;
+	ULONG	ep_type;
+	ULONG	iface_id;
+} __attribute__ ((packed)) QMI_QOS_BIND_DATA_PORT_TLV_EP_ID, *PQMI_QOS_BIND_DATA_PORT_TLV_EP_ID;
+
+typedef struct _QMI_QOS_BIND_DATA_PORT_TLV_MUX_ID
+{
+	UCHAR	TLVType;		//0x11
+	USHORT	TLVLength;
+	UCHAR	mux_id;
+} __attribute__ ((packed)) QMI_QOS_BIND_DATA_PORT_TLV_MUX_ID, *PQMI_QOS_BIND_DATA_PORT_TLV_MUX_ID;
+
+typedef struct _QMI_QOS_BIND_DATA_PORT_TLV_DATA_PORT
+{
+	UCHAR	TLVType;		//0x12
+	USHORT	TLVLength;
+	USHORT	data_port;
+} __attribute__ ((packed)) QMI_QOS_BIND_DATA_PORT_TLV_DATA_PORT, *PQMI_QOS_BIND_DATA_PORT_TLV_DATA_PORT;
+
+typedef struct _QMI_QOS_BIND_DATA_PORT_REQ_MSG
+{
+	USHORT	Type;
+	USHORT	Length;
+	QMI_QOS_BIND_DATA_PORT_TLV_EP_ID		EpIdTlv;
+	QMI_QOS_BIND_DATA_PORT_TLV_MUX_ID		MuxIdTlv;
+	//QMI_QOS_BIND_DATA_PORT_TLV_DATA_PORT	DataPortTlv;
+} __attribute__ ((packed)) QMI_QOS_BIND_DATA_PORT_REQ_MSG, *PQMI_QOS_BIND_DATA_PORT_REQ_MSG;
+
+typedef struct _QMI_QOS_BIND_DATA_PORT_RESP_MSG
+{
+	USHORT	Type;
+	USHORT	Length;
+	UCHAR	TLVType;		//0x02
+	USHORT	TLVLength;
+	USHORT	QMUXResult;
+	USHORT	QMUXError;
+} __attribute__ ((packed)) QMI_QOS_BIND_DATA_PORT_RESP_MSG, *PQMI_QOS_BIND_DATA_PORT_RESP_MSG;
+
+typedef struct _QMI_QOS_INDICATION_REGISTER_TLV_REPORT_GLOBAL_QOS_FLOW
+{
+	UCHAR	TLVType;		//0x10
+	USHORT	TLVLength;
+	UCHAR	report_global_qos_flows;
+} __attribute__ ((packed)) QMI_QOS_INDICATION_REGISTER_TLV_REPORT_GLOBAL_QOS_FLOW, *PQMI_QOS_INDICATION_REGISTER_TLV_REPORT_GLOBAL_QOS_FLOW;
+
+typedef struct _QMI_QOS_INDICATION_REGISTER_TLV_SUPPRESS_REPORT_FLOW_CTL
+{
+	UCHAR	TLVType;		//0x11
+	USHORT	TLVLength;
+	UCHAR	suppress_report_flow_control;
+} __attribute__ ((packed)) QMI_QOS_INDICATION_REGISTER_TLV_SUPPRESS_REPORT_FLOW_CTL, *PQMI_QOS_INDICATION_REGISTER_TLV_SUPPRESS_REPORT_FLOW_CTL;
+
+typedef struct _QMI_QOS_INDICATION_REGISTER_TLV_SUPPRESS_NW_STATUS_IND
+{
+	UCHAR	TLVType;		//0x12
+	USHORT	TLVLength;
+	UCHAR	suppress_network_status_ind;
+} __attribute__ ((packed)) QMI_QOS_INDICATION_REGISTER_TLV_SUPPRESS_NW_STATUS_IND, *PQMI_QOS_INDICATION_REGISTER_TLV_SUPPRESS_NW_STATUS_IND;
+
+typedef struct _QMI_QOS_INDICATION_REGISTER_REQ_MSG
+{
+	USHORT	Type;
+	USHORT	Length;
+	QMI_QOS_INDICATION_REGISTER_TLV_REPORT_GLOBAL_QOS_FLOW		ReportGlobalQosFlowTlv;
+ 	//QMI_QOS_INDICATION_REGISTER_TLV_SUPPRESS_REPORT_FLOW_CTL	SuppressReportFlowCtlTlv;
+	//QMI_QOS_INDICATION_REGISTER_TLV_SUPPRESS_NW_STATUS_IND		SuppressNWStatusIndTlv;
+} __attribute__ ((packed)) QMI_QOS_INDICATION_REGISTER_REQ_MSG, *PQMI_QOS_INDICATION_REGISTER_REQ_MSG;
+
+typedef struct _QMI_QOS_INDICATION_REGISTER_RESP_MSG
+{
+	USHORT	Type;
+	USHORT	Length;
+	UCHAR	TLVType;		//0x02
+	USHORT	TLVLength;
+	USHORT	QMUXResult;
+	USHORT	QMUXError;
+} __attribute__ ((packed)) QMI_QOS_INDICATION_REGISTER_RESP_MSG, *PQMI_QOS_INDICATION_REGISTER_RESP_MSG;
+
+typedef struct _QMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_STATE
+{
+	UCHAR	TLVType;		//0x01
+	USHORT	TLVLength;
+	ULONG	qos_id;
+	UCHAR	new_flow;
+	ULONG	state_change;
+} __attribute__ ((packed)) QMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_STATE, *PQMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_STATE;
+
+typedef struct _QMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_GRANTED
+{
+	UCHAR	TLVType;		//0x10 0x11
+	USHORT	TLVLength;
+	ULONG64	flow_valid_params;
+	ULONG	ip_flow_trf_cls;
+	ULONG64 data_rate_max;
+	ULONG64	guaranteed_rate;
+	ULONG	peak_rate;
+	ULONG	token_rate;
+	ULONG	bucket_size;
+	ULONG	ip_flow_latency;
+	ULONG	ip_flow_jitter;
+	USHORT	ip_flow_pkt_error_rate_multiplier;
+	USHORT	ip_flow_pkt_error_rate_exponent;
+	ULONG	ip_flow_min_policed_packet_size;
+	ULONG	ip_flow_max_allowed_packet_size;
+	ULONG	ip_flow_3gpp_residual_bit_error_rate;
+	ULONG	ip_flow_3gpp_traffic_handling_priority;
+	USHORT	ip_flow_3gpp2_profile_id;
+	UCHAR	ip_flow_3gpp2_flow_priority;
+	UCHAR	ip_flow_3gpp_im_cn_flag;
+	UCHAR	ip_flow_3gpp_sig_ind;
+	ULONG	ip_flow_lte_qci;
+} __attribute__ ((packed)) QMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_GRANTED, *PQMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_GRANTED;
+
+typedef struct _QMI_QOS_GLOBAL_QOS_FLOW_TLV_FILTER
+{
+	UCHAR	TLVType;		//0x12 0x13
+	USHORT	TLVLength;
+	UCHAR	tx_rx_qos_filter_len;
+	UCHAR	ip_version;
+	ULONG64	valid_params0;
+	ULONG	ipv4_addr0;
+	ULONG	subnet_mask0;
+	ULONG	ipv4_addr1;
+	ULONG	subnet_mask1;
+	UCHAR	val4;
+	UCHAR	mask4;
+	ULONG64	valid_params01;
+	UCHAR	ipv6_address00;
+	UCHAR	ipv6_address01;
+	UCHAR	ipv6_address02;
+	UCHAR	ipv6_address03;
+	UCHAR	ipv6_address04;
+	UCHAR	ipv6_address05;
+	UCHAR	ipv6_address06;
+	UCHAR	ipv6_address07;
+	UCHAR	ipv6_address08;
+	UCHAR	ipv6_address09;
+	UCHAR	ipv6_address010;
+	UCHAR	ipv6_address011;
+	UCHAR	ipv6_address012;
+	UCHAR	ipv6_address013;
+	UCHAR	ipv6_address014;
+	ULONG	ipv6_address015;
+	UCHAR	prefix_len0;
+	UCHAR	ipv6_address10;
+	UCHAR	ipv6_address11;
+	UCHAR	ipv6_address12;
+	UCHAR	ipv6_address13;
+	UCHAR	ipv6_address14;
+	UCHAR	ipv6_address15;
+	UCHAR	ipv6_address16;
+	UCHAR	ipv6_address17;
+	UCHAR	ipv6_address18;
+	UCHAR	ipv6_address19;
+	UCHAR	ipv6_address110;
+	UCHAR	ipv6_address111;
+	UCHAR	ipv6_address112;
+	UCHAR	ipv6_address113;
+	UCHAR	ipv6_address114;
+	ULONG	ipv6_address115;
+	UCHAR	prefix_len1;
+	UCHAR	val6;
+	UCHAR	mask6;
+	ULONG	flow_label;
+	ULONG	xport_protocol;
+	ULONG64	valid_params2;
+	USHORT	port0;
+	USHORT	range0;
+	USHORT	port1;
+	USHORT	range1;
+	ULONG64	valid_params3;
+	USHORT	port2;
+	USHORT	range2;
+	USHORT	port3;
+	USHORT	range3;
+	ULONG64	valid_params4;
+	UCHAR	type;
+	UCHAR	code;
+	ULONG64	valid_params5;
+	ULONG	spi0;
+	ULONG64	valid_params6;
+	ULONG	spi1;
+	USHORT	filter_id;
+	USHORT	filter_precedence;
+} __attribute__ ((packed)) QMI_QOS_GLOBAL_QOS_FLOW_TLV_FILTER, *PQMI_QOS_GLOBAL_QOS_FLOW_TLV_FILTER;
+
+typedef struct _QMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_TYPE
+{
+	UCHAR	TLVType;		//0x14
+	USHORT	TLVLength;
+	ULONG	flow_type;
+} __attribute__ ((packed)) QMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_TYPE, *PQMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_TYPE;
+
+typedef struct _QMI_QOS_GLOBAL_QOS_FLOW_TLV_BEARER_ID
+{
+	UCHAR	TLVType;		//0x15
+	USHORT	TLVLength;
+	UCHAR	bearer_id;
+} __attribute__ ((packed)) QMI_QOS_GLOBAL_QOS_FLOW_TLV_BEARER_ID, *PQMI_QOS_GLOBAL_QOS_FLOW_TLV_BEARER_ID;
+
+typedef struct _QMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_CTL_SEQ_NUM
+{
+	UCHAR	TLVType;		//0x16
+	USHORT	TLVLength;
+	USHORT	fc_seq_num;
+} __attribute__ ((packed)) QMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_CTL_SEQ_NUM, *PQMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_CTL_SEQ_NUM;
+
+typedef struct _QMI_QOS_GLOBAL_QOS_FLOW_TLV_5G_QCI
+{
+	UCHAR	TLVType;		//0x17 0x18
+	USHORT	TLVLength;
+	ULONG	tx_rx_5g_qci;
+} __attribute__ ((packed)) QMI_QOS_GLOBAL_QOS_FLOW_TLV_5G_QCI, *PQMI_QOS_GLOBAL_QOS_FLOW_TLV_5G_QCI;
+
+typedef struct _QMI_QOS_GLOBAL_QOS_FLOW_TLV_AVG_WINDOW
+{
+	UCHAR	TLVType;		//0x19 0x1A
+	USHORT	TLVLength;
+	USHORT	tx_rx_avg_window;
+} __attribute__ ((packed)) QMI_QOS_GLOBAL_QOS_FLOW_TLV_AVG_WINDOW, *PQMI_QOS_GLOBAL_QOS_FLOW_TLV_AVG_WINDOW;
+
+typedef struct _QMI_QOS_GLOBAL_QOS_FLOW_TLV_TX_FILTER_MATCH_ALL
+{
+	UCHAR	TLVType;		//0x1B
+	USHORT	TLVLength;
+	UCHAR	tx_filter_match_all_len;
+	USHORT	filter_id;
+} __attribute__ ((packed)) QMI_QOS_GLOBAL_QOS_FLOW_TLV_TX_FILTER_MATCH_ALL, *PQMI_QOS_GLOBAL_QOS_FLOW_TLV_TX_FILTER_MATCH_ALL;
+
+typedef struct _QMI_QOS_GLOBAL_QOS_FLOW_IND_MSG
+{
+	USHORT	Type;
+	USHORT	Length;
+	QMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_STATE			FlowStateTlv;
+	//QMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_GRANTED		TxFlowGrantedTlv;
+	//QMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_GRANTED		RxFlowGrantedTlv;
+	//QMI_QOS_GLOBAL_QOS_FLOW_TLV_FILTER				TxFilterTlv;
+	//QMI_QOS_GLOBAL_QOS_FLOW_TLV_FILTER				RxFilterTlv;
+	//QMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_TYPE			FlowTypeTlv;
+	//QMI_QOS_GLOBAL_QOS_FLOW_TLV_BEARER_ID			BearerIdTlv;
+	//QMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_CTL_SEQ_NUM	FlowCtlSeqNumTlv;
+	//QMI_QOS_GLOBAL_QOS_FLOW_TLV_5G_QCI				Tx5GQciTlv;
+	//QMI_QOS_GLOBAL_QOS_FLOW_TLV_5G_QCI				Rx5GQciTlv;
+	//QMI_QOS_GLOBAL_QOS_FLOW_TLV_AVG_WINDOW			AvgWindowTlv;
+	//QMI_QOS_GLOBAL_QOS_FLOW_TLV_TX_FILTER_MATCH_ALL	TxFilterMatchAllTlv;
+} __attribute__ ((packed)) QMI_QOS_GLOBAL_QOS_FLOW_IND_MSG, *PQMI_QOS_GLOBAL_QOS_FLOW_IND_MSG;
+
+typedef struct _QMI_QOS_GET_QOS_INFO_TLV_QOS_ID
+{
+	UCHAR	TLVType;		//0x01
+	USHORT	TLVLength;
+	ULONG	qos_id;
+} __attribute__ ((packed)) QMI_QOS_GET_QOS_INFO_TLV_QOS_ID, *PQMI_QOS_GET_QOS_INFO_TLV_QOS_ID;
+
+typedef struct _QMI_QOS_GET_QOS_INFO_TLV_FLOW_STATUS
+{
+	UCHAR	TLVType;		//0x10
+	USHORT	TLVLength;
+	UCHAR	flow_status;
+} __attribute__ ((packed)) QMI_QOS_GET_QOS_INFO_TLV_FLOW_STATUS, *PQMI_QOS_GET_QOS_INFO_TLV_FLOW_STATUS;
+
+typedef struct _QMI_QOS_GET_QOS_INFO_TLV_GRANTED_FLOW
+{
+	UCHAR	TLVType;		//0x11 0x12
+	USHORT	TLVLength;
+	ULONG64	flow_valid_params;
+	ULONG	ip_flow_trf_cls;
+	ULONG64 data_rate_max;
+	ULONG64	guaranteed_rate;
+	ULONG	peak_rate;
+	ULONG	token_rate;
+	ULONG	bucket_size;
+	ULONG	ip_flow_latency;
+	ULONG	ip_flow_jitter;
+	USHORT	ip_flow_pkt_error_rate_multiplier;
+	USHORT	ip_flow_pkt_error_rate_exponent;
+	ULONG	ip_flow_min_policed_packet_size;
+	ULONG	ip_flow_max_allowed_packet_size;
+	ULONG	ip_flow_3gpp_residual_bit_error_rate;
+	ULONG	ip_flow_3gpp_traffic_handling_priority;
+	USHORT	ip_flow_3gpp2_profile_id;
+	UCHAR	ip_flow_3gpp2_flow_priority;
+	UCHAR	ip_flow_3gpp_im_cn_flag;
+	UCHAR	ip_flow_3gpp_sig_ind;
+	ULONG	ip_flow_lte_qci;
+} __attribute__ ((packed)) QMI_QOS_GET_QOS_INFO_TLV_GRANTED_FLOW, *PQMI_QOS_GET_QOS_INFO_TLV_GRANTED_FLOW;
+
+typedef struct _QMI_QOS_GET_QOS_INFO_TLV_FILTER_SPECS
+{
+	UCHAR	TLVType;		//0x13 0x14
+	USHORT	TLVLength;
+	UCHAR	tx_rx_qos_filter_len;
+	UCHAR	ip_version;
+	ULONG64	valid_params0;
+	ULONG	ipv4_addr0;
+	ULONG	subnet_mask0;
+	ULONG	ipv4_addr1;
+	ULONG	subnet_mask1;
+	UCHAR	val4;
+	UCHAR	mask4;
+	ULONG64	valid_params01;
+	UCHAR	ipv6_address00;
+	UCHAR	ipv6_address01;
+	UCHAR	ipv6_address02;
+	UCHAR	ipv6_address03;
+	UCHAR	ipv6_address04;
+	UCHAR	ipv6_address05;
+	UCHAR	ipv6_address06;
+	UCHAR	ipv6_address07;
+	UCHAR	ipv6_address08;
+	UCHAR	ipv6_address09;
+	UCHAR	ipv6_address010;
+	UCHAR	ipv6_address011;
+	UCHAR	ipv6_address012;
+	UCHAR	ipv6_address013;
+	UCHAR	ipv6_address014;
+	ULONG	ipv6_address015;
+	UCHAR	prefix_len0;
+	UCHAR	ipv6_address10;
+	UCHAR	ipv6_address11;
+	UCHAR	ipv6_address12;
+	UCHAR	ipv6_address13;
+	UCHAR	ipv6_address14;
+	UCHAR	ipv6_address15;
+	UCHAR	ipv6_address16;
+	UCHAR	ipv6_address17;
+	UCHAR	ipv6_address18;
+	UCHAR	ipv6_address19;
+	UCHAR	ipv6_address110;
+	UCHAR	ipv6_address111;
+	UCHAR	ipv6_address112;
+	UCHAR	ipv6_address113;
+	UCHAR	ipv6_address114;
+	ULONG	ipv6_address115;
+	UCHAR	prefix_len1;
+	UCHAR	val6;
+	UCHAR	mask6;
+	ULONG	flow_label;
+	ULONG	xport_protocol;
+	ULONG64	valid_params2;
+	USHORT	port0;
+	USHORT	range0;
+	USHORT	port1;
+	USHORT	range1;
+	ULONG64	valid_params3;
+	USHORT	port2;
+	USHORT	range2;
+	USHORT	port3;
+	USHORT	range3;
+	ULONG64	valid_params4;
+	UCHAR	type;
+	UCHAR	code;
+	ULONG64	valid_params5;
+	ULONG	spi0;
+	ULONG64	valid_params6;
+	ULONG	spi1;
+	USHORT	filter_id;
+	USHORT	filter_precedence;
+} __attribute__ ((packed)) QMI_QOS_GET_QOS_INFO_TLV_FILTER_SPECS, *PQMI_QOS_GET_QOS_INFO_TLV_FILTER_SPECS;
+
+typedef struct _QMI_QOS_GET_QOS_INFO_TLV_EXT_ERROR_INFO
+{
+	UCHAR	TLVType;		//0x15
+	USHORT	TLVLength;
+	USHORT	ext_error_info;
+} __attribute__ ((packed)) QMI_QOS_GET_QOS_INFO_TLV_EXT_ERROR_INFO, *PQMI_QOS_GET_QOS_INFO_TLV_EXT_ERROR_INFO;
+
+typedef struct _QMI_QOS_GET_QOS_INFO_TLV_5G_QCI
+{
+	UCHAR	TLVType;		//0x16 0x17
+	USHORT	TLVLength;
+	ULONG	tx_rx_5g_qci;
+} __attribute__ ((packed)) QMI_QOS_GET_QOS_INFO_TLV_5G_QCI, *PQMI_QOS_GET_QOS_INFO_TLV_5G_QCI;
+
+typedef struct _QMI_QOS_GET_QOS_INFO_TLV_AVG_WINDOW
+{
+	UCHAR	TLVType;		//0x18 0x19
+	USHORT	TLVLength;
+	USHORT	tx_rx_averaging_window;
+} __attribute__ ((packed)) QMI_QOS_GET_QOS_INFO_TLV_AVG_WINDOW, *PQMI_QOS_GET_QOS_INFO_TLV_AVG_WINDOW;
+
+typedef struct _QMI_QOS_GET_QOS_INFO_TLV_TX_FILTER_MATCH_ALL
+{
+	UCHAR	TLVType;		//0x1A
+	USHORT	TLVLength;
+	UCHAR	tx_filter_match_all_len;
+	USHORT	filter_id;
+} __attribute__ ((packed)) QMI_QOS_GET_QOS_INFO_TLV_TX_FILTER_MATCH_ALL, *PQMI_QOS_GET_QOS_INFO_TLV_TX_FILTER_MATCH_ALL;
+
+typedef struct _QMI_QOS_GET_QOS_INFO_REQ_MSG
+{
+	USHORT	Type;
+	USHORT	Length;
+	QMI_QOS_GET_QOS_INFO_TLV_QOS_ID		QosIdTlv;
+} __attribute__ ((packed)) QMI_QOS_GET_QOS_INFO_REQ_MSG, *PQMI_QOS_GET_QOS_INFO_REQ_MSG;
+
+typedef struct _QMI_QOS_GET_QOS_INFO_RESP_MSG
+{
+	USHORT	Type;
+	USHORT	Length;
+	UCHAR	TLVType;		//0x02
+	USHORT	TLVLength;
+	USHORT	QMUXResult;
+	USHORT	QMUXError;
+	//QMI_QOS_GET_QOS_INFO_TLV_FLOW_STATUS			FlowStatusTlv;
+	//QMI_QOS_GET_QOS_INFO_TLV_GRANTED_FLOW			TxGrantedFlowTlv;
+	//QMI_QOS_GET_QOS_INFO_TLV_GRANTED_FLOW			RxGrantedFlowTlv;
+	//QMI_QOS_GET_QOS_INFO_TLV_FILTER_SPECS			TxFilterSpecsTlv;
+	//QMI_QOS_GET_QOS_INFO_TLV_FILTER_SPECS			RxFilterSpecsTlv;
+	//QMI_QOS_GET_QOS_INFO_TLV_EXT_ERROR_INFO			ExtErrorInfoTlv;
+	//QMI_QOS_GET_QOS_INFO_TLV_5G_QCI					Tx5GQciTlv;
+	//QMI_QOS_GET_QOS_INFO_TLV_5G_QCI					Rx5GQciTlv;
+	//QMI_QOS_GET_QOS_INFO_TLV_AVG_WINDOW				TxAvgWindowTlv;
+	//QMI_QOS_GET_QOS_INFO_TLV_AVG_WINDOW				RxAvgWindowTlv;
+	//QMI_QOS_GET_QOS_INFO_TLV_TX_FILTER_MATCH_ALL	TxFilterMatchAllTlv;
+} __attribute__ ((packed)) QMI_QOS_GET_QOS_INFO_RESP_MSG, *PQMI_QOS_GET_QOS_INFO_RESP_MSG;
+
+#define QOS_IND_FLOW_STATE_ACTIVATED 0x00
+#define QOS_IND_FLOW_STATE_MODIFIED  0x01
+#define QOS_IND_FLOW_STATE_DELETED   0x02
+#define QOS_IND_FLOW_STATE_SUSPENDED 0x03
+#define QOS_IND_FLOW_STATE_ENABLED   0x04
+#define QOS_IND_FLOW_STATE_DISABLED  0x05
+#define QOS_IND_FLOW_STATE_INVALID	 0x06
 
 #define QOS_EVENT_RPT_IND_FLOW_ACTIVATED 0x01
 #define QOS_EVENT_RPT_IND_FLOW_MODIFIED  0x02
@@ -3632,7 +4069,7 @@ typedef struct _QMUX_MSG
       QMIWDS_GET_DEFAULT_SETTINGS_RESP_MSG      GetDefaultSettingsResp;
       QMIWDS_MODIFY_PROFILE_SETTINGS_REQ_MSG    ModifyProfileSettingsReq;
       QMIWDS_MODIFY_PROFILE_SETTINGS_RESP_MSG   ModifyProfileSettingsResp;
-      QMIWDS_GET_PROFILE_SETTINGS_REQ_MSG    GetProfileSettingsReq;
+      QMIWDS_GET_PROFILE_SETTINGS_REQ_MSG		GetProfileSettingsReq;
       QMIWDS_CREATE_PROFILE_SETTINGS_REQ_MSG    CreatetProfileSettingsReq;
 #if 0
       QMIWDS_GET_DATA_BEARER_REQ_MSG            GetDataBearerReq;
@@ -3702,10 +4139,17 @@ typedef struct _QMUX_MSG
 #endif
 
       // QMIQOS Messages
-#if 0
+#if 1
       QMI_QOS_SET_EVENT_REPORT_REQ_MSG          QosSetEventReportReq;
       QMI_QOS_SET_EVENT_REPORT_RESP_MSG         QosSetEventReportRsp;
-      QMI_QOS_EVENT_REPORT_IND_MSG              QosEventReportInd;
+      QMI_QOS_SET_EVENT_REPORT_IND_MSG          QosSetEventReportInd;
+	  QMI_QOS_BIND_DATA_PORT_REQ_MSG			QosBindDataPortReq;
+	  QMI_QOS_BIND_DATA_PORT_RESP_MSG			QosBindDataPortRsp;
+	  QMI_QOS_INDICATION_REGISTER_REQ_MSG		QosIndRegReq;
+	  QMI_QOS_INDICATION_REGISTER_RESP_MSG		QosIndRegRsp;
+	  QMI_QOS_GLOBAL_QOS_FLOW_IND_MSG			QosGlobalQosFlowInd;
+	  QMI_QOS_GET_QOS_INFO_REQ_MSG				QosGetQosInfoReq;
+	  QMI_QOS_GET_QOS_INFO_RESP_MSG				QosGetQosInfoRsp;
 #endif
 
       // QMIWMS Messages
@@ -3796,3 +4240,24 @@ typedef struct _QMUX_MSG
 #pragma pack(pop)
 
 #endif // MPQMUX_H
+
+// ======================= COEX ==============================
+#define QMI_COEX_GET_WWAN_STATE_REQ 0x22
+#define QMI_COEX_GET_WWAN_STATE_RESP 0x22
+
+typedef struct {
+
+  uint32_t freq;
+  /**<   Band center frequency in MHz. */
+
+  uint32_t bandwidth;
+  /**<   Bandwidth in MHz. */
+}coex_band_type_v01;  /* Type */
+
+typedef struct _QMI_COEX_GET_WWAN_STATE_RESP_MSG_LTE_BAND
+{
+   UCHAR  TLVType;
+   USHORT TLVLength;
+   coex_band_type_v01 ul_band;
+   coex_band_type_v01  dl_band;
+} __attribute__ ((packed)) QMI_COEX_GET_WWAN_STATE_RESP_MSG_LTE_BAND, *PQMI_COEX_GET_WWAN_STATE_RESP_MSG_LTE_BAND;

@@ -8,12 +8,26 @@
 #define CONFIG_VERSION
 //#define CONFIG_SIGNALINFO
 //#define CONFIG_CELLINFO
+//#define CONFIG_COEX_WWAN_STATE
 #define CONFIG_DEFAULT_PDP 1
 //#define CONFIG_IMSI_ICCID
 #define QUECTEL_UL_DATA_AGG
 //#define QUECTEL_QMI_MERGE
 //#define REBOOT_SIM_CARD_WHEN_APN_CHANGE
 //#define CONFIG_QRTR
+//#define CONFIG_ENABLE_QOS
+//#define CONFIG_REG_QOS_IND
+//#define CONFIG_GET_QOS_INFO
+//#define CONFIG_GET_QOS_DATA_RATE
+
+#if (defined(CONFIG_REG_QOS_IND) || defined(CONFIG_GET_QOS_INFO) || defined(CONFIG_GET_QOS_DATA_RATE))
+#ifndef CONFIG_REG_QOS_IND
+#define CONFIG_REG_QOS_IND
+#endif
+#ifndef CONFIG_ENABLE_QOS
+#define CONFIG_ENABLE_QOS
+#endif
+#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -208,6 +222,9 @@ typedef struct __PROFILE {
     int curIpFamily;
     int rawIP;
     int muxid;
+#ifdef CONFIG_ENABLE_QOS
+    UINT qos_id;
+#endif
     int wda_client;
     IPV4_T ipv4;
     IPV6_T ipv6;
@@ -276,6 +293,9 @@ typedef enum {
 #define RIL_UNSOL_DATA_CALL_LIST_CHANGED    0x1005
 #define MODEM_REPORT_RESET_EVENT 0x1006
 #define RIL_UNSOL_LOOPBACK_CONFIG_IND 0x1007
+#ifdef CONFIG_REG_QOS_IND
+#define RIL_UNSOL_GLOBAL_QOS_FLOW_IND_QOS_ID 0x1008
+#endif
 
 extern pthread_mutex_t cm_command_mutex;
 extern pthread_cond_t cm_command_cond;
@@ -296,6 +316,12 @@ extern void qmidevice_send_event_to_main(int triger_event);
 extern void qmidevice_send_event_to_main_ext(int triger_event, void *data, unsigned len);
 extern uint8_t qmi_over_mbim_get_client_id(uint8_t QMIType);
 extern uint8_t qmi_over_mbim_release_client_id(uint8_t QMIType, uint8_t ClientId);
+#ifdef CONFIG_REG_QOS_IND
+extern UCHAR ql_get_global_qos_flow_ind_qos_id(PQCQMIMSG pResponse, UINT *qos_id);
+#endif
+#ifdef CONFIG_GET_QOS_DATA_RATE
+extern UCHAR ql_get_global_qos_flow_ind_data_rate(PQCQMIMSG pResponse, void *max_data_rate);
+#endif
 
 struct request_ops {
     int (*requestBaseBandVersion)(PROFILE_T *profile);
@@ -315,6 +341,9 @@ struct request_ops {
     int (*requestGetICCID)(void);
     int (*requestGetIMSI)(void);
     int (*requestRadioPower)(int state);
+    int (*requestRegisterQos)(PROFILE_T *profile);
+    int (*requestGetQosInfo)(PROFILE_T *profile);
+    int (*requestGetCoexWWANState)(void);
 };
 extern const struct request_ops qmi_request_ops;
 extern const struct request_ops mbim_request_ops;
@@ -344,10 +373,12 @@ extern int debug_qmi;
 extern int qmidevice_control_fd[2];
 extern int g_donot_exit_when_modem_hangup;
 extern USHORT le16_to_cpu(USHORT v16);
-extern UINT  le32_to_cpu (UINT v32);
-extern UINT  ql_swap32(UINT v32);
+extern UINT le32_to_cpu(UINT v32);
+extern ULONG64 le64_to_cpu(ULONG64 v64);
+extern UINT ql_swap32(UINT v32);
 extern USHORT cpu_to_le16(USHORT v16);
 extern UINT cpu_to_le32(UINT v32);
+extern ULONG64 cpu_to_le64(ULONG64 v64);
 extern void update_resolv_conf(int iptype, const char *ifname, const char *dns1, const char *dns2);
 void update_ipv4_address(const char *ifname, const char *ip, const char *gw, unsigned prefix);
 void update_ipv6_address(const char *ifname, const char *ip, const char *gw, unsigned prefix);

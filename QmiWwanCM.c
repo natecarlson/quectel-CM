@@ -23,7 +23,7 @@
 
 #ifdef CONFIG_QMIWWAN
 static int cdc_wdm_fd = -1;
-static UCHAR qmiclientId[QMUX_TYPE_WDS_ADMIN + 1];
+static UCHAR qmiclientId[QMUX_TYPE_ALL];
 
 static UCHAR GetQCTLTransactionId(void) {
     static int TransactionId = 0;
@@ -181,6 +181,7 @@ static UCHAR QmiWwanGetClientID(UCHAR QMIType) {
                 case QMUX_TYPE_WMS: dbg_time("Get clientWMS = %d", ClientId); break;
                 case QMUX_TYPE_PDS: dbg_time("Get clientPDS = %d", ClientId); break;
                 case QMUX_TYPE_UIM: dbg_time("Get clientUIM = %d", ClientId); break;
+                case QMUX_TYPE_COEX: dbg_time("Get clientCOEX = %d", ClientId); break;
                 case QMUX_TYPE_WDS_ADMIN: dbg_time("Get clientWDA = %d", ClientId);
                 break;
                 default: break;
@@ -246,6 +247,12 @@ static int QmiWwanInit(PROFILE_T *profile) {
     qmiclientId[QMUX_TYPE_NAS] = QmiWwanGetClientID(QMUX_TYPE_NAS);
     qmiclientId[QMUX_TYPE_UIM] = QmiWwanGetClientID(QMUX_TYPE_UIM);
     qmiclientId[QMUX_TYPE_WDS_ADMIN] = QmiWwanGetClientID(QMUX_TYPE_WDS_ADMIN);
+#ifdef CONFIG_COEX_WWAN_STATE
+    qmiclientId[QMUX_TYPE_COEX] = QmiWwanGetClientID(QMUX_TYPE_COEX);
+#endif
+#ifdef CONFIG_ENABLE_QOS
+    qmiclientId[QMUX_TYPE_QOS] = QmiWwanGetClientID(QMUX_TYPE_QOS);
+#endif
     profile->wda_client = qmiclientId[QMUX_TYPE_WDS_ADMIN];
 
     return 0;

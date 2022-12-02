@@ -48,6 +48,7 @@ qmi_name_item(QMUX_TYPE_QOS),
 qmi_name_item(QMUX_TYPE_WMS),
 qmi_name_item(QMUX_TYPE_PDS),
 qmi_name_item(QMUX_TYPE_WDS_ADMIN),
+qmi_name_item(QMUX_TYPE_COEX),
 };
 
 static const QMI_NAME_T qmi_ctl_CtlFlags[] = {
@@ -176,6 +177,19 @@ qmi_name_item(QMIDMS_GET_BAND_CAP_REQ), //               0x0045
 qmi_name_item(QMIDMS_GET_BAND_CAP_RESP), //              0x0045 
 };
 
+static const QMI_NAME_T qmux_qos_Type[] = {
+qmi_name_item( QMI_QOS_SET_EVENT_REPORT_REQ), //        0x0001
+qmi_name_item( QMI_QOS_SET_EVENT_REPORT_RESP), //       0x0001
+qmi_name_item( QMI_QOS_SET_EVENT_REPORT_IND), //        0x0001
+qmi_name_item( QMI_QOS_BIND_DATA_PORT_REQ), //          0x002B
+qmi_name_item( QMI_QOS_BIND_DATA_PORT_RESP), //         0x002B
+qmi_name_item( QMI_QOS_INDICATION_REGISTER_REQ), //     0x002F
+qmi_name_item( QMI_QOS_INDICATION_REGISTER_RESP), //    0x002F
+qmi_name_item( QMI_QOS_GLOBAL_QOS_FLOW_IND), //         0x0031
+qmi_name_item( QMI_QOS_GET_QOS_INFO_REQ), //            0x0033
+qmi_name_item( QMI_QOS_GET_QOS_INFO_RESP), //           0x0033
+};
+
 static const QMI_NAME_T qmux_nas_Type[] = {
 // ======================= NAS ==============================
 qmi_name_item(QMINAS_SET_EVENT_REPORT_REQ), //             0x0002
@@ -295,6 +309,11 @@ qmi_name_item( QMIUIM_GET_CARD_STATUS_RESP), //      0x002F
 qmi_name_item( QMIUIM_STATUS_CHANGE_IND), //         0x0032
 };
 
+static const QMI_NAME_T qmux_coex_Type[] = {
+qmi_name_item(QMI_COEX_GET_WWAN_STATE_REQ), //    0x0022
+qmi_name_item(QMI_COEX_GET_WWAN_STATE_RESP), //    0x0022
+};
+
 static const char * qmi_name_get(const QMI_NAME_T *table, size_t size, int type, const char *tag) {
     static char unknow[40];
     size_t i;
@@ -403,6 +422,12 @@ int dump_qmux(QMI_SERVICE_TYPE serviceType, PQCQMUX_HDR QMUXHdr) {
         break;
         case QMUX_TYPE_PDS:
         case QMUX_TYPE_QOS:
+			dbg("Type:               %04x\t%s\n", le16_to_cpu(QMUXMsgHdr->Type),
+            QMUX_NAME(qmux_qos_Type, le16_to_cpu(QMUXMsgHdr->Type), tag));
+		break;
+        case QMUX_TYPE_COEX:
+			dbg("Type:               %04x\t%s\n", le16_to_cpu(QMUXMsgHdr->Type),
+            QMUX_NAME(qmux_coex_Type, le16_to_cpu(QMUXMsgHdr->Type), tag));
         case QMUX_TYPE_CTL:                
         default:
             dbg("Type:               %04x\t%s\n", le16_to_cpu(QMUXMsgHdr->Type), "PDS/QOS/CTL/unknown!");

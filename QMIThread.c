@@ -673,12 +673,64 @@ void QmiThreadRecvQMI(PQCQMIMSG pResponse) {
                     && (le16_to_cpu(pResponse->MUXMsg.QMUXMsgHdrResp.Type) == QMI_WDA_SET_LOOPBACK_CONFIG_IND)) {
     	qmidevice_send_event_to_main_ext(RIL_UNSOL_LOOPBACK_CONFIG_IND,
             &pResponse->MUXMsg.SetLoopBackInd, sizeof(pResponse->MUXMsg.SetLoopBackInd));
-    } else {
+    }
+#ifdef CONFIG_REG_QOS_IND
+    else if ((pResponse->QMIHdr.QMIType == QMUX_TYPE_QOS)
+          && (le16_to_cpu(pResponse->MUXMsg.QMUXMsgHdrResp.Type) == QMI_QOS_GLOBAL_QOS_FLOW_IND)) {
+        UINT qos_id = 0;
+        UCHAR new_flow = ql_get_global_qos_flow_ind_qos_id(pResponse, &qos_id);
+        if (qos_id != 0 && new_flow == 1)
+            qmidevice_send_event_to_main_ext(RIL_UNSOL_GLOBAL_QOS_FLOW_IND_QOS_ID, &qos_id, sizeof(qos_id));
+#ifdef CONFIG_GET_QOS_DATA_RATE
+        if (new_flow) {
+            ULONG64 max_data_rate[2] = {0};
+            if (ql_get_global_qos_flow_ind_data_rate(pResponse, (void *)max_data_rate) == 0){}
+        }
+#endif
+    }
+#endif
+    else {
         if (debug_qmi)
             dbg_time("nobody care this qmi msg!!");
     }
     pthread_mutex_unlock(&cm_command_mutex);
 }
+
+#ifdef CONFIG_COEX_WWAN_STATE
+static int requestGetCoexWWANState(void) {
+    PQCQMIMSG pRequest;
+    PQCQMIMSG pResponse;
+    PQMUX_MSG pMUXMsg;
+    PQMI_COEX_GET_WWAN_STATE_RESP_MSG_LTE_BAND pLteBand;
+    static QMI_COEX_GET_WWAN_STATE_RESP_MSG_LTE_BAND oldLteBand = {-1, -1};
+    int err;
+
+    pRequest = ComposeQMUXMsg(QMUX_TYPE_COEX, QMI_COEX_GET_WWAN_STATE_REQ, NULL, NULL);
+    err = QmiThreadSendQMI(pRequest, &pResponse);
+
+    if (err < 0 || pResponse == NULL) {
+        dbg_time("%s err = %d", __func__, err);
+        return err;
+    }
+
+    pMUXMsg = &pResponse->MUXMsg;
+    if (le16_to_cpu(pMUXMsg->QMUXMsgHdrResp.QMUXResult) || le16_to_cpu(pMUXMsg->QMUXMsgHdrResp.QMUXError)) {
+        dbg_time("%s QMUXResult = 0x%x, QMUXError = 0x%x", __func__, le16_to_cpu(pMUXMsg->QMUXMsgHdrResp.QMUXResult), le16_to_cpu(pMUXMsg->QMUXMsgHdrResp.QMUXError));
+        err = le16_to_cpu(pMUXMsg->QMUXMsgHdrResp.QMUXError);
+        free(pResponse);
+        return err;
+    } 
+    pLteBand = (PQMI_COEX_GET_WWAN_STATE_RESP_MSG_LTE_BAND)GetTLV(&pResponse->MUXMsg.QMUXMsgHdr, 0x10);
+
+    if (pLteBand && memcmp(pLteBand, &oldLteBand, sizeof(oldLteBand))) {
+        oldLteBand = *pLteBand;
+        dbg_time("%s ul_freq %d ul_bandwidth %d", __func__, le32_to_cpu(pLteBand->ul_band.freq), le32_to_cpu(pLteBand->ul_band.bandwidth));
+        dbg_time("%s dl_freq %d dl_bandwidth %d", __func__, le32_to_cpu(pLteBand->dl_band.freq), le32_to_cpu(pLteBand->dl_band.bandwidth));
+    }
+    free(pResponse);
+    return 0;
+}
+#endif
 
 static int requestSetEthMode(PROFILE_T *profile) {
     PQCQMIMSG pRequest;
@@ -2258,6 +2310,158 @@ static int requestSetLoopBackState(UCHAR loopback_state, ULONG replication_facto
     return 0;
 }
 
+#ifdef CONFIG_ENABLE_QOS
+static USHORT QosSetBindMuxDataPort(PQMUX_MSG pMUXMsg, void *arg) {
+    PROFILE_T *profile = (PROFILE_T *)arg;
+    pMUXMsg->QosBindDataPortReq.EpIdTlv.TLVType = 0x10;
+    pMUXMsg->QosBindDataPortReq.EpIdTlv.TLVLength = cpu_to_le16(8);
+    pMUXMsg->QosBindDataPortReq.EpIdTlv.ep_type = cpu_to_le32(profile->rmnet_info.ep_type);
+    pMUXMsg->QosBindDataPortReq.EpIdTlv.iface_id = cpu_to_le32(profile->rmnet_info.iface_id);
+    pMUXMsg->QosBindDataPortReq.MuxIdTlv.TLVType = 0x11;
+    pMUXMsg->QosBindDataPortReq.MuxIdTlv.TLVLength = cpu_to_le16(1);
+    pMUXMsg->QosBindDataPortReq.MuxIdTlv.mux_id = profile->muxid;
+    return sizeof(QMI_QOS_BIND_DATA_PORT_REQ_MSG);
+}
+
+#ifdef CONFIG_REG_QOS_IND
+static USHORT QosIndRegReq(PQMUX_MSG pMUXMsg, void *arg) {
+    pMUXMsg->QosIndRegReq.ReportGlobalQosFlowTlv.TLVType = 0x10;
+    pMUXMsg->QosIndRegReq.ReportGlobalQosFlowTlv.TLVLength = cpu_to_le16(1);
+    pMUXMsg->QosIndRegReq.ReportGlobalQosFlowTlv.report_global_qos_flows = 1;
+    return sizeof(QMI_QOS_INDICATION_REGISTER_REQ_MSG);
+}
+#endif
+
+static int requestRegisterQos(PROFILE_T *profile) {
+    PQCQMIMSG pRequest;
+    PQCQMIMSG pResponse = NULL;
+    PQMUX_MSG pMUXMsg;
+    int err;
+
+    pRequest = ComposeQMUXMsg(QMUX_TYPE_QOS, QMI_QOS_BIND_DATA_PORT_REQ , QosSetBindMuxDataPort, (void *)profile);
+    err = QmiThreadSendQMI(pRequest, &pResponse);
+    dbg_time("%s QosSetBindMuxDataPort", __func__);
+    qmi_rsp_check_and_return();
+    if (pResponse) free(pResponse);
+	
+#ifdef CONFIG_REG_QOS_IND
+    pRequest = ComposeQMUXMsg(QMUX_TYPE_QOS, QMI_QOS_INDICATION_REGISTER_REQ , QosIndRegReq, NULL);
+    err = QmiThreadSendQMI(pRequest, &pResponse);
+    dbg_time("%s QosIndRegReq", __func__);
+    qmi_rsp_check_and_return();
+    if (pResponse) free(pResponse);
+#endif
+    return 0;
+}
+
+#ifdef CONFIG_GET_QOS_INFO
+UCHAR ql_get_qos_info_data_rate(PQCQMIMSG pResponse, void *max_data_rate)
+{
+    PQMI_QOS_GET_QOS_INFO_TLV_GRANTED_FLOW qos_tx_granted_flow = NULL;
+    PQMI_QOS_GET_QOS_INFO_TLV_GRANTED_FLOW qos_rx_granted_flow = NULL;
+    qos_tx_granted_flow = (PQMI_QOS_GET_QOS_INFO_TLV_GRANTED_FLOW)GetTLV(&pResponse->MUXMsg.QMUXMsgHdr, 0x11);
+    if(qos_tx_granted_flow != NULL)
+    {
+        *(ULONG64 *)(max_data_rate) = le64_to_cpu(qos_tx_granted_flow->data_rate_max);
+        dbg_time("GET_QOS_INFO: tx_data_rate_max=%llu", *(ULONG64 *)(max_data_rate+0));
+    }
+    else
+        dbg_time("GET_QOS_INFO: No qos_tx_granted_flow");
+    qos_rx_granted_flow = (PQMI_QOS_GET_QOS_INFO_TLV_GRANTED_FLOW)GetTLV(&pResponse->MUXMsg.QMUXMsgHdr, 0x12);
+    if(qos_rx_granted_flow != NULL)
+    {
+        *(ULONG64 *)(max_data_rate+sizeof(ULONG64)) = le64_to_cpu(qos_rx_granted_flow->data_rate_max);
+        dbg_time("GET_QOS_INFO: rx_data_rate_max=%llu", *(ULONG64 *)(max_data_rate+sizeof(ULONG64)));
+    }
+    else
+        dbg_time("GET_QOS_INFO: No qos_rx_granted_flow");
+    if(qos_tx_granted_flow != NULL || qos_rx_granted_flow != NULL)
+        return 0;
+    else
+        return 1;
+}
+
+static USHORT QosGetQosInfoReq(PQMUX_MSG pMUXMsg, void *arg) {
+    PROFILE_T *profile = (PROFILE_T *)arg;
+    pMUXMsg->QosGetQosInfoReq.QosIdTlv.TLVType = 0x01;
+    pMUXMsg->QosGetQosInfoReq.QosIdTlv.TLVLength = cpu_to_le16(4);
+    pMUXMsg->QosGetQosInfoReq.QosIdTlv.qos_id = cpu_to_le32(profile->qos_id);
+    return sizeof(QMI_QOS_GET_QOS_INFO_REQ_MSG);
+}
+
+static int requestGetQosInfo(PROFILE_T *profile) {
+    PQCQMIMSG pRequest;
+    PQCQMIMSG pResponse = NULL;
+    PQMUX_MSG pMUXMsg;
+    int err;
+
+    if(profile->qos_id == 0)
+    {
+        dbg_time("%s request not send: invalid qos_id", __func__);
+        return 0;
+    }
+    pRequest = ComposeQMUXMsg(QMUX_TYPE_QOS, QMI_QOS_GET_QOS_INFO_REQ , QosGetQosInfoReq, (void *)profile);
+    err = QmiThreadSendQMI(pRequest, &pResponse);
+    qmi_rsp_check_and_return();
+    if (pResponse)
+    {
+#ifdef CONFIG_GET_QOS_DATA_RATE
+        ULONG64 max_data_rate[2] = {0};
+        if(ql_get_qos_info_data_rate(pResponse, (void *)max_data_rate) == 0){}
+#endif
+        free(pResponse);
+    }
+    return 0;
+}
+#endif //#ifdef CONFIG_GET_QOS_INFO
+
+#ifdef CONFIG_REG_QOS_IND
+UCHAR ql_get_global_qos_flow_ind_qos_id(PQCQMIMSG pResponse, UINT *qos_id)
+{
+    PQMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_STATE qos_flow_state = NULL;
+    qos_flow_state = (PQMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_STATE)GetTLV(&pResponse->MUXMsg.QMUXMsgHdr, 0x01);
+    if(qos_flow_state != NULL)
+    {
+        if(le32_to_cpu(qos_flow_state->state_change) == QOS_IND_FLOW_STATE_ACTIVATED && qos_flow_state->new_flow == 1)
+        {
+            *qos_id = le32_to_cpu(qos_flow_state->qos_id);
+            dbg_time("QMI_QOS_GLOBAL_QOS_FLOW_IND: qos_id=%u state=QOS_IND_FLOW_STATE_ACTIVATED", *qos_id);
+        }
+        return (qos_flow_state->new_flow);
+    }
+    return (0);
+}
+
+#ifdef CONFIG_GET_QOS_DATA_RATE
+UCHAR ql_get_global_qos_flow_ind_data_rate(PQCQMIMSG pResponse, void *max_data_rate)
+{
+    PQMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_GRANTED qos_tx_flow_granted = NULL;
+    PQMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_GRANTED qos_rx_flow_granted = NULL;
+    qos_tx_flow_granted = (PQMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_GRANTED)GetTLV(&pResponse->MUXMsg.QMUXMsgHdr, 0x10);
+    if(qos_tx_flow_granted != NULL)
+    {
+        *(ULONG64 *)(max_data_rate) = le64_to_cpu(qos_tx_flow_granted->data_rate_max);
+        dbg_time("QMI_QOS_GLOBAL_QOS_FLOW_IND: tx_data_rate_max=%llu", *(ULONG64 *)(max_data_rate+0));
+    }
+    else
+    dbg_time("QMI_QOS_GLOBAL_QOS_FLOW_IND: No qos_tx_flow_granted");
+    qos_rx_flow_granted = (PQMI_QOS_GLOBAL_QOS_FLOW_TLV_FLOW_GRANTED)GetTLV(&pResponse->MUXMsg.QMUXMsgHdr, 0x11);
+    if(qos_rx_flow_granted != NULL)
+    {
+        *(ULONG64 *)(max_data_rate+sizeof(ULONG64)) = le64_to_cpu(qos_rx_flow_granted->data_rate_max);
+        dbg_time("QMI_QOS_GLOBAL_QOS_FLOW_IND: rx_data_rate_max=%llu", *(ULONG64 *)(max_data_rate+sizeof(ULONG64)));
+    }
+    else
+        dbg_time("QMI_QOS_GLOBAL_QOS_FLOW_IND: No qos_rx_flow_granted");
+    if(qos_tx_flow_granted != NULL || qos_rx_flow_granted != NULL)
+        return 0;
+    else
+        return 1;
+}
+#endif
+#endif //#ifdef CONFIG_REG_QOS_IND
+#endif //#ifdef CONFIG_ENABLE_QOS
+
 #ifdef CONFIG_CELLINFO
 /*
     at+qeng="servingcell" and at+qeng="neighbourcell"
@@ -2304,6 +2508,15 @@ const struct request_ops qmi_request_ops = {
 #endif
     .requestSetLoopBackState = requestSetLoopBackState,
     .requestRadioPower = requestRadioPower,
+#ifdef CONFIG_ENABLE_QOS
+    .requestRegisterQos = requestRegisterQos,
+#endif
+#ifdef CONFIG_GET_QOS_INFO
+    .requestGetQosInfo = requestGetQosInfo,
+#endif
+#ifdef CONFIG_COEX_WWAN_STATE
+    .requestGetCoexWWANState = requestGetCoexWWANState,
+#endif
 };
 
 #ifdef CONFIG_CELLINFO

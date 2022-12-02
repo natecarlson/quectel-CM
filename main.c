@@ -260,7 +260,7 @@ static int qmi_main(PROFILE_T *profile)
     int triger_event = 0;
     int signo;
 #ifdef CONFIG_SIM
-    SIM_Status SIMStatus;
+    SIM_Status SIMStatus = SIM_ABSENT;
 #endif
     UCHAR PSAttachedState = 0;
     UCHAR  IPv4ConnectionStatus = QWDS_PKT_DATA_UNKNOW;
@@ -316,8 +316,9 @@ static int qmi_main(PROFILE_T *profile)
         request_ops->requestSetEthMode(profile);
 
     if (request_ops->requestSetLoopBackState && profile->loopback_state) {
-    	request_ops->requestSetLoopBackState(profile->loopback_state, profile->replication_factor);
-    	profile->loopback_state = 0;
+    	qmierr = request_ops->requestSetLoopBackState(profile->loopback_state, profile->replication_factor);
+    	if (qmierr != QMI_ERR_INVALID_QMI_CMD) //X20 return this error 
+            profile->loopback_state = 0; //wait for RIL_UNSOL_LOOPBACK_CONFIG_IND
     }
 
     if (request_ops->requestGetSIMStatus) {
@@ -349,6 +350,10 @@ static int qmi_main(PROFILE_T *profile)
     }
 
     request_ops->requestRegistrationState(&PSAttachedState);
+
+#ifdef CONFIG_ENABLE_QOS
+    request_ops->requestRegisterQos(profile);
+#endif
 
     send_signo_to_main(SIG_EVENT_CHECK);
 
@@ -465,6 +470,9 @@ static int qmi_main(PROFILE_T *profile)
                             
                             if (request_ops->requestGetCellInfoList)
                                 request_ops->requestGetCellInfoList();
+
+                            if (request_ops->requestGetCoexWWANState)
+                                request_ops->requestGetCoexWWANState();
 
                             if (profile->enable_ipv4 && IPv4ConnectionStatus != QWDS_PKT_DATA_DISCONNECTED
                                 && !request_ops->requestQueryDataCall(&IPv4ConnectionStatus, IpFamilyV4))
@@ -590,6 +598,16 @@ static int qmi_main(PROFILE_T *profile)
                             }
                         }
                     	break;
+#ifdef CONFIG_REG_QOS_IND
+                        case RIL_UNSOL_GLOBAL_QOS_FLOW_IND_QOS_ID:
+                        {
+                            UINT qos_id = 0;
+                            if (read(fd, &qos_id, sizeof(qos_id)) == sizeof(qos_id)) {
+                                profile->qos_id = qos_id;
+                            }
+                        }
+                    	break;
+#endif
                         default:
                         break;
                     }
@@ -844,7 +862,7 @@ int main(int argc, char *argv[])
     int ret;
     PROFILE_T *ctx = &s_profile;
 
-    dbg_time("QConnectManager_Linux_V1.6.1");
+    dbg_time("QConnectManager_Linux_V1.6.2");
 
     ret = parse_user_input(argc, argv, ctx);
     if (!ret)
